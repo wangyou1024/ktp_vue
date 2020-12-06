@@ -1,0 +1,44 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wangyou.ktp_data.dao.MessageDao">
+    <!--    创建作业时生成“新作业”/“催交”消息-->
+    <insert id="createMessage" parameterType="com.wangyou.ktp_data.entity.Message">
+        insert into message (mid,cid,hid,course,title,classify,publish)
+        value (#{mid},#{cid},#{hid},#{course},#{title},#{classify},#{publish})
+    </insert>
+    <!--    "新作业"消息绑定所有课程学生-->
+    <insert id="bindNew">
+        insert into re_user_message (mid,uid,isRead) select #{mid} mid,uid,0 isRead from re_user_course where cid=#{cid} and role='学'
+    </insert>
+    <!--    有新人加入课程时，给他绑定所有新作业消息-->
+    <insert id="joinCourse">
+        insert into re_user_message (mid,uid,isRead) select mid,#{uid} uid,0 isRead from message where cid=#{cid} and classify=0
+    </insert>
+    <!--    "催交"消息绑定-->
+    <insert id="bindCall">
+        insert into re_user_message (mid,uid,isRead) select mid,#{uid} uid,0 isRead from message where hid=#{hid} and classify=1
+    </insert>
+    <!--    课程名称变化时-->
+    <update id="updateCourse">
+        update message set course=#{course} where cid=#{cid}
+    </update>
+    <!--    作业名称变化-->
+    <update id="updateTitle">
+        update message set title=#{title} where hid=#{hid}
+    </update>
+    <!--    读消息-->
+    <update id="readMessage">
+        update re_user_message set isRead=1 where mid=#{mid} and uid=#{uid}
+    </update>
+    <!--    读所有消息-->
+    <update id="readAllMessages">
+        update re_user_message set isRead=1 where uid=#{uid}
+    </update>
+    <!--    查询某人的全部消息-->
+    <select id="findMessagesByUid" resultType="com.wangyou.ktp_data.entity.Message">
+        select message.mid,cid,hid,course,title,classify,publish,isRead from
+        re_user_message left join message on re_user_message.mid=message.mid where uid=#{uid}
+    </select>
+
+</mapper>

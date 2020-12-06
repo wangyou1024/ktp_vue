@@ -1,0 +1,41 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wangyou.ktp_data.dao.FileDao">
+    <!--    上传文件-->
+    <insert id="uploadFile" parameterType="com.wangyou.ktp_data.entity.FileData">
+        insert into file (fid,name,realName,classify) value
+        (#{fid},#{name},#{realName},#{classify})
+    </insert>
+    <!--    绑定作业题目文件-->
+    <update id="bindHid">
+        update file set hid=#{hid}, classify=0 where fid in
+        <foreach collection="fids" item="fid" index="index" open="(" close=")" separator=",">
+            #{fid}
+        </foreach>
+    </update>
+    <!--    绑定作业答案文件-->
+    <update id="bindAid">
+        update file set hid=#{hid},aid=#{aid},classify=1 where fid in (
+        <foreach collection="fids" item="fid" index="index" separator=",">
+            #{fid}
+        </foreach>
+        )
+    </update>
+    <!--    删除文件-->
+    <delete id="deleteFile">
+        delete from file where fid=#{fid}
+    </delete>
+    <!--    查找作业题目对应的文件-->
+    <select id="findProblemFiles" resultType="com.wangyou.ktp_data.entity.FileData">
+        select fid,name,realName,classify from file where hid=#{hid} and classify=0
+    </select>
+    <!--    查找答案对应的文件-->
+    <select id="findAnswerFiles" resultType="com.wangyou.ktp_data.entity.FileData">
+        select fid,name,realName,classify from file where aid=#{aid} and classify=1
+    </select>
+    <!--    通过id查找-->
+    <select id="findFileByFid" resultType="com.wangyou.ktp_data.entity.FileData">
+        select fid,name,realName,classify from file where fid=#{fid}
+    </select>
+</mapper>

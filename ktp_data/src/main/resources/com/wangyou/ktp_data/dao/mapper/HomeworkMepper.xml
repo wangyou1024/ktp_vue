@@ -1,0 +1,76 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wangyou.ktp_data.dao.HomeworkDao">
+    <resultMap id="BaseHomework" type="com.wangyou.ktp_data.entity.Homework">
+        <id column="hid" property="hid"/>
+        <result column="cid" property="cid"/>
+        <result column="title" property="title"/>
+        <result column="content" property="content"/>
+        <result column="startDate" property="startDate"/>
+        <result column="startTime" property="startTime"/>
+        <result column="overDate" property="overDate"/>
+        <result column="overTime" property="overTime"/>
+        <result column="corrected" property="corrected"/>
+        <result column="correcting" property="correcting"/>
+        <result column="submit" property="submit"/>
+    </resultMap>
+    <resultMap id="HomeworkWithFile" type="com.wangyou.ktp_data.entity.Homework" extends="BaseHomework">
+        <collection property="fileList" ofType="com.wangyou.ktp_data.entity.FileData">
+            <id column="fid" property="fid"/>
+            <result column="name" property="name"/>
+            <result column="realName" property="realName"/>
+            <result column="classify" property="classify"/>
+        </collection>
+    </resultMap>
+    <!--    创建作业-->
+    <insert id="createHomework" parameterType="com.wangyou.ktp_data.entity.Homework">
+        insert into homework (hid,cid,title,content,startDate,startTime,overDate,overTime,corrected,correcting,submit,quit)
+        value (#{hid},#{cid},#{title},#{content},#{startDate},#{startTime},#{overDate},#{overTime},#{corrected},#{correcting},#{submit},0)
+    </insert>
+    <!--    更新作业信息-->
+    <update id="updateHomework" parameterType="com.wangyou.ktp_data.entity.Homework">
+        update homework set title=#{title},content=#{content},overDate=#{overDate},overTime=#{overTime}
+        where hid=#{hid}
+    </update>
+    <!--    删除作业-->
+    <update id="quitHomework">
+        update homework set quit=1 where hid=#{hid}
+    </update>
+    <!--    批改作业-->
+    <update id="correctHomework">
+        update homework set corrected=corrected+1,correcting=correcting-1 where hid=#{hid}
+    </update>
+    <!--    提交作业，待批改人数加一，待提交人数减一-->
+    <update id="submitHomework">
+        update homework set correcting=correcting+1,submit=submit-1 where hid=#{hid}
+    </update>
+    <!--    加入课程，待提交人数加一-->
+    <update id="joinCourse">
+        update homework set submit=submit+1 where cid=#{cid}
+    </update>
+    <!--    退出课程，待提交人数减一-->
+    <update id="quitCourse">
+        update homework set submit=submit-1 where cid=#{cid}
+    </update>
+    <!--    查询作业-->
+    <select id="findHomeworksByCid" resultMap="HomeworkWithFile">
+        select rehomework.hid,rehomework.cid,rehomework.title,
+        rehomework.content,rehomework.startDate,rehomework.startTime,
+        rehomework.overDate,rehomework.overTime,rehomework.corrected,
+        rehomework.correcting,rehomework.submit,
+        refile.fid,refile.name,refile.realName,refile.classify
+        from (select * from homework where cid=#{cid} and quit=0)
+        as rehomework left join
+        (select * from file where classify=0 )as refile
+        on rehomework.hid=refile.hid order by rehomework.startDate desc,rehomework.startTime desc
+    </select>
+    <!--    查询某一作业-->
+    <select id="findHomeworkByHid" resultMap="BaseHomework">
+        select * from homework where hid=#{hid}
+    </select>
+    <!--    查询每个课程前两个作业-->
+    <select id="findLastHomeworkByCid" resultMap="BaseHomework">
+        select * from homework where cid=#{cid} order by startDate desc,startTime desc limit 0,2
+    </select>
+</mapper>

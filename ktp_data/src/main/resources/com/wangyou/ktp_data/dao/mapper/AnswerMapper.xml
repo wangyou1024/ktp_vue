@@ -1,0 +1,89 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wangyou.ktp_data.dao.AnswerDao">
+    <resultMap id="BaseAnswer" type="com.wangyou.ktp_data.entity.Answer">
+        <id column="aid" property="aid"/>
+        <result column="uid" property="uid"/>
+        <result column="hid" property="hid"/>
+        <result column="number" property="number"/>
+        <result column="name" property="name"/>
+        <result column="content" property="content"/>
+        <result column="grade" property="grade"/>
+        <result column="dateTime" property="dateTime"/>
+    </resultMap>
+    <resultMap id="AnswerWithFile" type="com.wangyou.ktp_data.entity.Answer" extends="BaseAnswer">
+        <collection property="fileList" ofType="com.wangyou.ktp_data.entity.FileData">
+            <id column="fid" property="fid"/>
+            <result column="fileName" property="name"/>
+            <result column="realName" property="realName"/>
+            <result column="classify" property="classify"/>
+        </collection>
+    </resultMap>
+    <!--    提交作业，默认分数为-1-->
+    <insert id="submitAnswer" parameterType="com.wangyou.ktp_data.entity.Answer">
+        insert into answer (aid,uid,hid,number,name,content,grade,dateTime)
+        value (#{aid},#{uid},#{hid},#{number},#{name},#{content},-1,#{dateTime})
+    </insert>
+    <!--    更新作业提交的内容-->
+    <update id="updateContent">
+        update answer set content=#{content} where aid=#{aid}
+    </update>
+    <!--    批改作业-->
+    <update id="correctAnswer">
+        update answer set grade=#{grade} where aid=#{aid}
+    </update>
+    <!--    学生更新了信息-->
+    <update id="updateUserInfo">
+        update answer set number=#{number},name=#{name} where uid=#{uid}
+    </update>
+    <!--    查询某一课程的所有作业答案-->
+    <select id="findAnswersByHid" resultMap="AnswerWithFile">
+        select s.uid,s.name,s.number,
+        a.aid,a.hid,a.content,a.grade,a.dateTime,a.fid,a.fileName,a.realName,a.classify
+        from
+            <!--查询课程的所有学生-->
+            (select user.uid,user.name,user.number from user,re_user_course,homework
+            where homework.hid=#{hid}
+              and re_user_course.role="学"
+              and homework.cid=re_user_course.cid
+              and user.uid=re_user_course.uid)
+            as s left join
+            <!-- 查询已交作业-->
+            (select reanswer.aid,reanswer.uid,reanswer.hid,
+                    reanswer.content,reanswer.grade,reanswer.dateTime,
+                    refile.fid,refile.name fileName,refile.realName,refile.classify
+                from
+                    (select aid,uid,hid,number,name,content,grade,dateTime from answer where hid=#{hid})
+                    as reanswer left join
+                    (select fid,aid,hid,name,realName,classify from file where hid=#{hid} and classify=1)
+                    as refile on reanswer.aid=refile.aid
+                order by reanswer.dateTime)
+            as a
+        on s.uid = a.uid
+    </select>
+    <!--    根据aid查询答案-->
+    <select id="findAnswerByAid" resultMap="AnswerWithFile">
+       select reanswer.aid,reanswer.uid,reanswer.hid,reanswer.number,
+        reanswer.name,reanswer.content,reanswer.grade,reanswer.dateTime,
+        refile.fid,refile.name fileName,refile.realName,refile.classify from
+        (select aid,uid,hid,number,name,content,grade,dateTime
+        from answer where aid=#{aid})
+        as reanswer left join
+        (select fid,aid,hid,name,realName,classify
+        from file where aid=#{aid} and classify=1)
+        as refile on reanswer.aid=refile.aid
+    </select>
+    <!--    查询某人的作业答案-->
+    <select id="findAnswerByUidAndHid" resultMap="AnswerWithFile">
+        select reanswer.aid,reanswer.uid,reanswer.hid,reanswer.number,
+        reanswer.name,reanswer.content,reanswer.grade,reanswer.dateTime,
+        refile.fid,refile.name fileName,refile.realName,refile.classify from
+        (select aid,uid,hid,number,name,content,grade,dateTime
+        from answer where uid=#{uid} and hid=#{hid})
+        as reanswer left join
+        (select fid,aid,hid,name,realName,classify
+        from file where hid=#{hid} and classify=1)
+        as refile on reanswer.aid=refile.aid
+    </select>
+</mapper>

@@ -1,0 +1,84 @@
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.wangyou.ktp_data.dao.CourseDao">
+    <!--   创建课程 -->
+    <insert id="createCourse" parameterType="com.wangyou.ktp_data.entity.Course">
+        insert into course (cid,title,className,inviteCode,semester,term,teacherHeader,teacherName,total) value
+        (#{cid},#{title},#{className},#{inviteCode},#{semester},#{term},#{teacherHeader},#{teacherName},#{total})
+    </insert>
+    <insert id="bindUser">
+        insert into re_user_course (ucid,uid,cid,role,top,reorganize,quit) value
+        (#{ucid},#{uid},#{cid},'教',1,0,0)
+    </insert>
+    <!--    教师信息修改时要同时更新课程里面的教师相关内容-->
+    <update id="bindTeacherHeader">
+        update course set teacherHeader=#{teacherHeader} where cid in (select cid from re_user_course where uid=#{uid} and role='教')
+    </update>
+    <update id="bindTeacherName">
+        update course set teacherName=#{teacherName} where cid in (select cid from re_user_course where uid=#{uid} and role='教')
+    </update>
+    <!--    更新课程-->
+    <update id="updateCourseInfo" parameterType="com.wangyou.ktp_data.entity.Course">
+        update course set title=#{title},className=#{calssName},semester=#{semester},term=#{term} where cid=#{cid}
+    </update>
+    <!--    加入课程-->
+    <select id="findCourseIdByInviteCode" resultType="String">
+        select cid from course where inviteCode=#{inviteCode}
+    </select>
+    <!--    初次加入课程与重复加入课程需要进行不同的处理-->
+    <select id="checkJoinState" resultType="com.wangyou.ktp_data.entity.Course">
+        select course.cid,course.title,course.className,course.inviteCode,
+        course.semester,course.term,course.teacherName,course.teacherHeader,course.total,
+        re_user_course.role,re_user_course.top,re_user_course.reorganize,re_user_course.quit
+        from re_user_course left join course on re_user_course.cid=course.cid
+        where uid=#{uid} and re_user_course.cid=#{cid}
+    </select>
+    <!--    默认加入为学生，置顶，未归档，未退出-->
+    <insert id="joinCourse">
+        insert into re_user_course (ucid,uid,cid,role,top,reorganize,quit) value
+        (#{ucid},#{uid},#{cid},'学',1,0,0)
+    </insert>
+    <!--    重新加入直接将退出标记位归0-->
+    <update id="reJoinCourse">
+        update re_user_course set quit=0 where uid=#{uid} and cid=#{cid}
+    </update>
+    <!--    更新总人数-->
+    <update id="increaseTotal">
+        update course set total=total+1 where cid=#{cid}
+    </update>
+    <!--    置顶-->
+    <update id="setTop">
+        update re_user_course set top=1 where uid=#{uid} and cid=#{cid}
+    </update>
+    <!--    取消置顶-->
+    <update id="cancelTop">
+        update re_user_course set top=0 where uid=#{uid} and cid=#{cid}
+    </update>
+    <!--    归档-->
+    <update id="setReorganize">
+        update re_user_course set reorganize=1 where uid=#{uid} and cid=#{cid}
+    </update>
+    <update id="cancelReorganize">
+        update re_user_course set reorganize=0 where uid=#{uid} and cid=#{cid}
+    </update>
+    <!--    退出-->
+    <update id="setQuit">
+        update re_user_course set quit=1 where uid=#{uid} and cid=#{cid}
+    </update>
+    <update id="decreaseTotal">
+        update course set total=total-1 where cid=#{cid}
+    </update>
+    <!--    查寻某一用户的所有课程-->
+    <select id="findCoursesByUid" resultType="com.wangyou.ktp_data.entity.Course">
+        select course.cid,title,className,inviteCode,semester,term,teacherHeader,teacherName,total,
+        role,top,reorganize,quit from course,re_user_course
+        where re_user_course.uid=#{uid} and course.cid=re_user_course.cid and re_user_course.quit=0
+    </select>
+    <!--    根据cid查询-->
+    <select id="findCourseByCidAndUid" resultType="com.wangyou.ktp_data.entity.Course">
+        select course.cid,title,className,inviteCode,semester,term,teacherHeader,teacherName,total,
+        role,top,reorganize,quit from course,re_user_course
+        where re_user_course.uid like concat("%",#{uid},"%") and course.cid=#{cid} and course.cid=re_user_course.cid
+    </select>
+</mapper>
